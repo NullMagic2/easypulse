@@ -353,15 +353,75 @@ bool switch_device(pulseaudio_manager *self, uint32_t device_index) {
 
     return true;
 }
+
+
 /**
- * @brief Callback function to check the volume of the PulseAudio context.
+ * @brief Retrieves the number of channels for a specified device.
  *
- * @param c Pointer to the PulseAudio context.
- * @param i Information about the device.
- * @param eol End of list flag.
- * @param userdata User-provided data.
+ * @param devices Pointer to an array of PulseSink structures.
+ * @param device_index Index of the device whose number of channels is to be retrieved.
+ *
+ * @return Number of channels for the specified device. Returns -1 on error.
  */
-static void set_volume_check_cb(pa_context *c, const pa_sink_info *i, int eol, void *userdata) {
+int get_device_channels(const pulseaudio_device *devices, int device_index) {
+    if (!devices || device_index < 0) {
+        fprintf(stderr, "[ERROR]: Invalid devices array or device index in get_device_channels.\n");
+        return -1;  // Return -1 or another indicator of failure
+    }
+    return devices[device_index].channel_map.channels;
+}
+
+
+
+/**
+ * @brief Callback function belonging to set_volume. Triggers when audio volume is set.
+ *
+ *
+ * @param c        Pointer to the PulseAudio context.
+ * @param success  Indicates the success (1) or failure (0) of the volume setting operation.
+ * @param userdata User data provided during the set_volume operation, expected to be of type `pulseaudio_manager`.
+ *
+ * @note On failure, an error message is printed to stderr with the reason for the failure.
+ * @note After the operations are processed, the function signals the main loop to continue.
+ */
+static void set_volume_cb1(pa_context *c, int success, void *userdata) {
+    (void) c;
+    pulseaudio_manager* manager = (pulseaudio_manager*) userdata;
+
+
+    if (!success) {
+        fprintf(stderr, "[ERROR]: Failed to set volume. Reason: %s\n", pa_strerror(pa_context_errno(c)));
+    }
+
+    // Debug: Print cvolume values for each channel as percentages
+    //pa_cvolume cvolume = manager->devices[manager->active_device_index].volume;
+
+    /*for (int i = 0; i < cvolume.channels; i++) {
+        float percentage = (cvolume.values[i] / (float)PA_VOLUME_NORM) * 100;
+        //printf("[DEBUG, volume_set_complete_cb()]: Channel %d cvolume value: %u (%.2f%%)\n", i, cvolume.values[i], percentage);
+    }
+    //printf("[DEBUG, volume_set_complete_cb invoked. Success: %d\n", success);*/
+
+    // Decrease the operations count and potentially signal the condition variable.
+    manager->operations_pending--;
+
+    // Signal the main loop to continue
+    pa_threaded_mainloop_signal(manager->mainloop, 0);
+}
+
+
+/**
+ * @brief Callback function belonging to set_volume.
+ * Triggers after audio volume levels are updated.
+ *
+ * @param c        Pointer to the PulseAudio context.
+ * @param success  Indicates the success (1) or failure (0) of the volume setting operation.
+ * @param userdata User data provided during the set_volume operation, expected to be of type `pulseaudio_manager`.
+ *
+ * @note On failure, an error message is printed to stderr with the reason for the failure.
+ * @note After the operations are processed, the function signals the main loop to continue.
+ */
+static void set_volume_cb2(pa_context *c, const pa_sink_info *i, int eol, void *userdata) {
     (void) c;
     pulseaudio_manager *self = (pulseaudio_manager *)userdata;
 
@@ -396,50 +456,6 @@ static void set_volume_check_cb(pa_context *c, const pa_sink_info *i, int eol, v
 
     //Signaling to continue.
     pa_threaded_mainloop_signal(self->mainloop, 0);
-}
-
-// Completion callback for volume set operation
-static void volume_set_complete_cb(pa_context *c, int success, void *userdata) {
-    (void) c;
-    pulseaudio_manager* manager = (pulseaudio_manager*) userdata;
-
-    //printf("[DEBUG, volume_set_complete_cb()]: inside volume_set_complete_cb()\n");
-    //printf("[DEBUG, volume_set_complete_cb()]: device name is, %s\n", manager->active_device_name);
-
-    if (!success) {
-        fprintf(stderr, "[ERROR]: Failed to set volume. Reason: %s\n", pa_strerror(pa_context_errno(c)));
-    }
-
-    // Debug: Print cvolume values for each channel as percentages
-    //pa_cvolume cvolume = manager->devices[manager->active_device_index].volume;
-
-    /*for (int i = 0; i < cvolume.channels; i++) {
-        float percentage = (cvolume.values[i] / (float)PA_VOLUME_NORM) * 100;
-        //printf("[DEBUG, volume_set_complete_cb()]: Channel %d cvolume value: %u (%.2f%%)\n", i, cvolume.values[i], percentage);
-    }
-    //printf("[DEBUG, volume_set_complete_cb invoked. Success: %d\n", success);*/
-
-    // Decrease the operations count and potentially signal the condition variable.
-    manager->operations_pending--;
-
-    // Signal the main loop to continue
-    pa_threaded_mainloop_signal(manager->mainloop, 0);
-}
-
-/**
- * @brief Retrieves the number of channels for a specified device.
- *
- * @param devices Pointer to an array of PulseSink structures.
- * @param device_index Index of the device whose number of channels is to be retrieved.
- *
- * @return Number of channels for the specified device. Returns -1 on error.
- */
-int get_device_channels(const pulseaudio_device *devices, int device_index) {
-    if (!devices || device_index < 0) {
-        fprintf(stderr, "[ERROR]: Invalid devices array or device index in get_device_channels.\n");
-        return -1;  // Return -1 or another indicator of failure
-    }
-    return devices[device_index].channel_map.channels;
 }
 
 
@@ -493,11 +509,11 @@ bool set_volume(pulseaudio_manager *self, uint32_t device_index, float percentag
     // Apply the volume change to the specific device by index and wait for the operation to complete
     const char *device_name_to_change = self->devices[device_index].name;
     self->operations_pending++;
-    pa_operation *op = pa_context_set_sink_volume_by_name(self->context, device_name_to_change, &cvolume, volume_set_complete_cb, self);
+    pa_operation *op = pa_context_set_sink_volume_by_name(self->context, device_name_to_change, &cvolume, set_volume_cb1, self);
     self->iterate(self, op);
 
     // Fetch the updated volume for the device and wait for the operation to complete
-    pa_operation *op2 = pa_context_get_sink_info_by_name(self->context, device_name_to_change, set_volume_check_cb, self);
+    pa_operation *op2 = pa_context_get_sink_info_by_name(self->context, device_name_to_change, set_volume_cb2, self);
     self->iterate(self, op2);
 
     return true;
