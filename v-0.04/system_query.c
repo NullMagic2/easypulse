@@ -466,36 +466,38 @@ uint32_t get_device_count(void) {
  * @param alsa_name Name of the ALSA device.
  * @return Maximum number of channels supported by the device or -1 on error.
  */
-int get_max_channels(const char *alsa_name) {
+int get_max_channels(const char *alsa_id) {
     snd_pcm_t *handle;
     snd_pcm_hw_params_t *params;
     unsigned int max_channels;
+    int err;
 
-    // Open the PCM device in playback mode
-    if (!alsa_name || snd_pcm_open(&handle, alsa_name, SND_PCM_STREAM_PLAYBACK, 0) < 0) {
-        fprintf(stderr, "Unable to open PCM device: %s\n", alsa_name ? alsa_name : "NULL");
+    if (!alsa_id) {
+        fprintf(stderr, "Invalid ALSA device ID provided.\n");
         return -1;
     }
 
+    if ((err = snd_pcm_open(&handle, alsa_id, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
+        fprintf(stderr, "Unable to open PCM device: %s, error: %s\n", alsa_id, snd_strerror(err));
+        return -1;
+    }
 
-    // Allocate a hardware parameters object
     snd_pcm_hw_params_alloca(&params);
-
-    // Fill it in with default values
-    snd_pcm_hw_params_any(handle, params);
-
-    // Get the maximum number of channels
-    if (snd_pcm_hw_params_get_channels_max(params, &max_channels) < 0) {
-        fprintf(stderr, "Error getting max channels for device: %s\n", alsa_name);
+    if ((err = snd_pcm_hw_params_any(handle, params)) < 0) {
+        fprintf(stderr, "Cannot initialize hardware parameter structure: %s\n", snd_strerror(err));
         snd_pcm_close(handle);
         return -1;
     }
 
+    // Set additional hardware parameters here if needed
 
+    if ((err = snd_pcm_hw_params_get_channels_max(params, &max_channels)) < 0) {
+        fprintf(stderr, "Error getting max channels for device: %s, error: %s\n", alsa_id, snd_strerror(err));
+        snd_pcm_close(handle);
+        return -1;
+    }
 
-    // Close the PCM device
     snd_pcm_close(handle);
-
     return max_channels;
 }
 
@@ -513,30 +515,34 @@ int get_min_channels(const char *alsa_id) {
     snd_pcm_t *handle;
     snd_pcm_hw_params_t *params;
     unsigned int min_channels;
+    int err;
 
-    // Open the PCM device in playback mode
-    if (!alsa_id || snd_pcm_open(&handle, alsa_id, SND_PCM_STREAM_PLAYBACK, 0) < 0) {
-        fprintf(stderr, "Unable to open PCM device: %s\n", alsa_id ? alsa_id : "NULL");
+    if (!alsa_id) {
+        fprintf(stderr, "Invalid ALSA device ID provided.\n");
         return -1;
     }
 
+    if ((err = snd_pcm_open(&handle, alsa_id, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
+        fprintf(stderr, "Unable to open PCM device: %s, error: %s\n", alsa_id, snd_strerror(err));
+        return -1;
+    }
 
-    // Allocate a hardware parameters object
     snd_pcm_hw_params_alloca(&params);
-
-    // Fill it in with default values
-    snd_pcm_hw_params_any(handle, params);
-
-    // Get the minimum number of channels
-    if (snd_pcm_hw_params_get_channels_min(params, &min_channels) < 0) {
-        fprintf(stderr, "Error getting min channels for device: %s\n", alsa_id);
+    if ((err = snd_pcm_hw_params_any(handle, params)) < 0) {
+        fprintf(stderr, "Cannot initialize hardware parameter structure: %s\n", snd_strerror(err));
         snd_pcm_close(handle);
         return -1;
     }
 
-    // Close the PCM device
-    snd_pcm_close(handle);
+    // Set additional hardware parameters here if needed
 
+    if ((err = snd_pcm_hw_params_get_channels_min(params, &min_channels)) < 0) {
+        fprintf(stderr, "Error getting min channels for device: %s, error: %s\n", alsa_id, snd_strerror(err));
+        snd_pcm_close(handle);
+        return -1;
+    }
+
+    snd_pcm_close(handle);
     return min_channels;
 }
 
