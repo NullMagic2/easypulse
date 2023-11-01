@@ -477,7 +477,7 @@ int get_max_channels(const char *alsa_id) {
         return -1;
     }
 
-    if ((err = snd_pcm_open(&handle, alsa_id, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
+    if ((err = snd_pcm_open(&handle, alsa_id, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK)) < 0) {
         fprintf(stderr, "Unable to open PCM device: %s, error: %s\n", alsa_id, snd_strerror(err));
         return -1;
     }
@@ -522,7 +522,7 @@ int get_min_channels(const char *alsa_id) {
         return -1;
     }
 
-    if ((err = snd_pcm_open(&handle, alsa_id, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
+    if ((err = snd_pcm_open(&handle, alsa_id, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK)) < 0) {
         fprintf(stderr, "Unable to open PCM device: %s, error: %s\n", alsa_id, snd_strerror(err));
         return -1;
     }
@@ -639,7 +639,7 @@ static void get_alsa_id_cb(pa_context *c, const pa_sink_info *i, int eol, void *
     // Check for end of list
     if (eol) {
         // Signal the main loop to unblock the iterate function
-        fprintf(stderr,"[DEBUG, get_alsa_id_cb()] End of function reached.\n");
+        //fprintf(stderr,"[DEBUG, get_alsa_id_cb()] End of function reached.\n");
         pa_threaded_mainloop_signal(shared_data_1.mainloop, 0);
         free(userdata);
         return;
@@ -657,8 +657,8 @@ static void get_alsa_id_cb(pa_context *c, const pa_sink_info *i, int eol, void *
     const char *alsa_card = pa_proplist_gets(i->proplist, "alsa.card");
     const char *alsa_device = pa_proplist_gets(i->proplist, "alsa.device");
 
-    fprintf(stderr, "[DEBUG, get_alsa_id_cb()], alsa.card is %s\n", alsa_card);
-    fprintf(stderr, "[DEBUG, get_alsa_id_cb()], alsa.device is %s\n", alsa_device);
+    //fprintf(stderr, "[DEBUG, get_alsa_id_cb()], alsa.card is %s\n", alsa_card);
+    //fprintf(stderr, "[DEBUG, get_alsa_id_cb()], alsa.device is %s\n", alsa_device);
 
     // Check if both properties are available and alsa.device is a digit
     if (alsa_card && alsa_device && isdigit((unsigned char)alsa_device[0])) {
@@ -675,7 +675,7 @@ static void get_alsa_id_cb(pa_context *c, const pa_sink_info *i, int eol, void *
         fprintf(stderr, "ALSA properties not found or invalid for sink.\n");
     }
 
-    fprintf(stderr, "[DEBUG, get_alsa_id_cb()] alsa ID is %s\n", shared_data_2.alsa_id);
+    //fprintf(stderr, "[DEBUG, get_alsa_id_cb()] alsa ID is %s\n", shared_data_2.alsa_id);
 
     // Signal the main loop to unblock the iterate function
     pa_threaded_mainloop_signal(shared_data_1.mainloop, 0);
@@ -713,7 +713,7 @@ const char* get_alsa_id(const char *sink_name) {
     }
 
     // Query PulseAudio for the information of the specified sink
-    fprintf(stderr,"[DEBUG, get_alsa_id()] sink name is: %s\n", sink_name_copy);
+    //fprintf(stderr,"[DEBUG, get_alsa_id()] sink name is: %s\n", sink_name_copy);
     op = pa_context_get_sink_info_by_name(shared_data_1.context, sink_name_copy, get_alsa_id_cb, sink_name_copy);
 
     // Wait for the PulseAudio operation to complete
