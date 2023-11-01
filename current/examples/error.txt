@@ -1,4 +1,0 @@
-[DEBUG, getActiveSink]: Iterating to get active sink info.
-[DEBUG]: Default sink name from server: alsa_output.pci-0000_01_00.1.hdmi-stereo
-[DEBUG]: Comparing with sink 0: alsa_output.pci-0000_00_1b.0.analog-surround-51
-[DEBUG]: Comparing with sink 1: alsa_output.pci-0000_01_00.1.hdmi-stereo
