@@ -1,0 +1,41 @@
++----------------+
+|  pavucontrol   |
+|  (initial file)|
++----------------+
+        |
+        | Callback function triggered when there's info/change related to a sink
+        V
++----------------+
+|    sink_cb     |
+| (pavucontrol.cc)|
++----------------+
+        |
+        | - If error, show error and return
+        | - If end-of-list (eol) is reached, decrease outstanding tasks count and return
+        | - Update GUI representation of a sink using w->updateSink()
+        V
++---------------------------+
+|  MainWindow::updateSink   |
+| (mainwindow.cc & .h)      |
++---------------------------+
+        |
+        | - Retrieve or create SinkWidget for the sink
+        | - Update SinkWidget properties (e.g., volume, mute state, active port, etc.)
+        | - Prepare context menu for the sink
+        | - Ensure the sink is displayed correctly via updateDeviceVisibility
+        V
++-------------------------------------+
+|  MainWindow::updateDeviceVisibility |
+| (mainwindow.cc & .h)                |
++-------------------------------------+
+        |
+        | - If idle source/callback is already queued, return
+        | - Schedule the idle_cb function to be called when the app is idle
+        V
++----------------+
+|    idle_cb     |
+| (mainwindow.cc)|
++----------------+
+        |
+        V
+     ... (Specific steps and logic for updating device visibility)
