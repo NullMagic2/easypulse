@@ -46,7 +46,7 @@ int main() {
     for (uint32_t i = 0; i < manager->input_count; i++) {
         const char *device_name = manager->inputs[i].name;
         int is_muted = get_muted_input_status(manager->inputs[i].code);
-        printf("%d: %s (muted: %s)\n", (i+1), device_name, is_muted == 1 ? "yes" : "no");
+        printf("%d: %s (muted: %s)\n", (i+1), device_name, is_muted == true ? "yes" : "no");
     }
 
     // Ask the user for the device index to toggle mute state
@@ -59,7 +59,7 @@ int main() {
     }
 
     // Check if the index is within range
-    if (index > manager->input_count) {
+    if ((index - 1) > manager->input_count) {
         fprintf(stderr, "Index out of range.\n");
         manager_cleanup(manager);
         return 1;

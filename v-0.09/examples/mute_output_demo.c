@@ -46,7 +46,7 @@ int main() {
     for (uint32_t i = 0; i < manager->output_count; i++) {
         const char *device_name = manager->outputs[i].name;
         int is_muted = get_muted_output_status(manager->outputs[i].code);
-        printf("%d: %s (muted: %s)\n", (i+1), device_name, is_muted == 1 ? "yes" : "no");
+        printf("%d: %s (muted: %s)\n", (i+1), device_name, is_muted == true ? "yes" : "no");
     }
 
     // Ask the user for the device index to toggle mute state
@@ -59,7 +59,7 @@ int main() {
     }
 
     // Check if the index is within range
-    if (index >= manager->output_count) {
+    if ((index - 1) >= manager->output_count) {
         fprintf(stderr, "Index out of range.\n");
         manager_cleanup(manager);
         return 1;
@@ -75,7 +75,7 @@ int main() {
 
     // Toggle the mute state of the selected sink
     int new_mute_state = !current_mute_state;
-    if (manager_toggle_output_mute(manager, (index-1), new_mute_state) != 0) {
+    if (manager_toggle_output_mute(manager, (index - 1), new_mute_state) != 0) {
         fprintf(stderr, "Failed to toggle the mute state.\n");
         manager_cleanup(manager);
         return 1;

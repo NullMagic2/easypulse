@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <ctype.h> // Include this for the isdigit() function
+#include <stdbool.h>
 
 // Since pulseaudio uses callbacks, we need something that will allow us to share data
 // between functions.
